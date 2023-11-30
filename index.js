@@ -10,7 +10,7 @@ const http = require('http');
 const MongoDBStore = require('connect-mongodb-session')(session);
 
 const { sessionHash, cookieConfig, maxAge, PORT, uri, jwtSecret } = require('./config');
-const { getUsers, errorHandler } = require('./utils');
+const { getUsers, errorHandler, getStatusFromUsers, addStatusToUser } = require('./utils');
 const { login, authenticate, validate } = require('./middlewares/user');
 
 const { createUser, findUser } = require('./services/user');
@@ -18,6 +18,7 @@ const { fetchRooms } = require('./services/rooms');
 const { saveMessageToDatabase, fetchMessages } = require('./services/messages');
 const { fetchFriendRequests, createFriendRequest } = require('./services/friend');
 
+const users = [];
 
 const app = express();
 
@@ -67,7 +68,10 @@ init();
 app.get('/data', authenticate, async (req, res) => {
   const rooms = await fetchRooms(req.user.id);
   const friends = await fetchFriendRequests(req.user.id) || []
-  res.status(200).send({ rooms, friends })
+  const userStatusList = getStatusFromUsers(users, req.user.id);
+  const processedRooms = addStatusToUser(rooms, userStatusList)
+  const processedFriends = addStatusToUser(friends, userStatusList)
+  res.status(200).send({ rooms: processedRooms, friends: processedFriends })
 })
 
 app.get('/:rid/messages', authenticate, async (req, res) => {
@@ -131,20 +135,20 @@ io.use((socket, next) => {
 });
 
 io.on("connection", async (socket) => {
-  const users = [];
-
   for (let [id, clientSocket] of io.of("/").sockets) {
-    users.push({
-      ...clientSocket.user,
-      userStatus: "online",
-    });
+    if (!users.find(user => user.id === clientSocket.user.id)) {
+      users.push({
+        ...clientSocket.user,
+        status: "online",
+      });
+    }
   }
 
   const rooms = await getUsers(users, socket.user.id)
 
   rooms.forEach(({ rid }) => socket.join(rid.toString()))
 
-  socket.to(rooms?.map(({ rid }) => rid.toString())).emit('connected', socket.user.id)
+  socket.to(rooms?.map(({ rid }) => rid.toString())).emit('user-connected', socket.user.id)
 
   socket.on('message', async (message) => {
     let newMessage = await saveMessageToDatabase(socket.user.id, message)

@@ -11,12 +11,14 @@ const fetchFriendRequests = async (id) => {
 
         const isSender = friend.sender.id === id
 
-        const populatedFriend = await Friend.populate(friend, {
+        let populatedFriend = await Friend.populate(friend, {
           path: !isSender ? 'receiver' : 'sender',
         });
 
+        populatedFriend = populatedFriend.toJSON()
+
         const user = {
-          ...populatedFriend.toJSON(),
+          ...populatedFriend,
           user: !isSender ? populatedFriend.receiver : populatedFriend.sender,
         };
 

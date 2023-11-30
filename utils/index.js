@@ -86,10 +86,35 @@ const getUsers = async (users, currentUserID) => {
   return list;
 }
 
+const getStatusFromUsers = (users, clientID) => {
+  return users.filter(user => user.id !== clientID).map(({ id, status }) => {
+    return {
+      id,
+      status
+    }
+  })
+}
+
+const addStatusToUser = (list, userStatusList) => {
+  return list.map(item => {
+    const foundStatus = userStatusList?.find(status => status.id === item.user.id)
+    return {
+      ...item,
+      user: {
+        ...item.user,
+        status: foundStatus || "offline"
+      }
+    }
+  })
+}
+
 module.exports = {
   errorHandler,
   createHashedPassword,
   findRoom,
   findSocketByUserId,
   getUsers,
+  getStatusFromUsers,
+  addStatusToUser,
+
 };
