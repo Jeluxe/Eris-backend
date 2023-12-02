@@ -1,6 +1,23 @@
 const Friend = require('../models/friend.model');
 const { findUserByUsername } = require('./user');
 
+const porcessFriendObject = async (friend, isSender) => {
+  let populatedFriend = await Friend.populate(friend, {
+    path: isSender ? 'receiver' : 'sender',
+  });
+
+  populatedFriend = populatedFriend.toJSON()
+
+  const processedFriend = {
+    ...populatedFriend,
+    user: isSender ? populatedFriend.receiver : populatedFriend.sender,
+  };
+
+  delete processedFriend.receiver;
+  delete processedFriend.sender;
+
+  return processedFriend;
+}
 
 const fetchFriendRequests = async (id) => {
   try {
@@ -11,21 +28,7 @@ const fetchFriendRequests = async (id) => {
 
         const isSender = friend.sender === id
 
-        let populatedFriend = await Friend.populate(friend, {
-          path: isSender ? 'receiver' : 'sender',
-        });
-
-        populatedFriend = populatedFriend.toJSON()
-
-        const user = {
-          ...populatedFriend,
-          user: isSender ? populatedFriend.receiver : populatedFriend.sender,
-        };
-
-        delete user.receiver;
-        delete user.sender;
-
-        return user;
+        return await porcessFriendObject(friend, isSender);
       }));
 
       return processedFriends
@@ -51,7 +54,9 @@ const createFriendRequest = async (user, targetUsername) => {
 
     if (!friendRequestExists) {
       const newFriendRequest = new Friend({ sender: user.id, receiver: receiver.id });
-      return await newFriendRequest.save()
+      const friend = await newFriendRequest.save()
+
+      return await porcessFriendObject(friend, true)
     }
     throw 'friend request already exists'
   } catch (error) {
