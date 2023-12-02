@@ -9,17 +9,17 @@ const fetchFriendRequests = async (id) => {
     if (friends.length > 0) {
       const processedFriends = await Promise.all(friends.map(async friend => {
 
-        const isSender = friend.sender.id === id
+        const isSender = friend.sender === id
 
         let populatedFriend = await Friend.populate(friend, {
-          path: !isSender ? 'receiver' : 'sender',
+          path: isSender ? 'receiver' : 'sender',
         });
 
         populatedFriend = populatedFriend.toJSON()
 
         const user = {
           ...populatedFriend,
-          user: !isSender ? populatedFriend.receiver : populatedFriend.sender,
+          user: isSender ? populatedFriend.receiver : populatedFriend.sender,
         };
 
         delete user.receiver;
@@ -39,26 +39,21 @@ const fetchFriendRequests = async (id) => {
 
 const createFriendRequest = async (user, targetUsername) => {
   try {
-    const reciever = await findUserByUsername(targetUsername);
+    const receiver = await findUserByUsername(targetUsername);
 
-    if (!reciever) throw "no such username, please consider case sensitive."
+    if (!receiver) throw "no such username, please consider case sensitive."
 
-    const validateSameUser = user.id === reciever.id;
+    const validateSameUser = user.id === receiver.id;
 
     if (validateSameUser) throw "cannot be send to yourself"
 
-    const friendRequestExists = await Friend.findOne({ $or: [{ sender: user.id, reciever: reciever.id }, { sender: reciever.id, reciever: user.id }] })
-    const isSender = friendRequestExists.sender.equals(user.id)
-    const populated = await friendRequestExists.populate(isSender ? 'receiver' : 'sender').execPopulate();
-    const friendRequest = {
-      ...populated.toJSON(),
-      user: isSender ? populated.receiver : populated.sender
-    }
-    if (!friendRequest) {
-      const newFriendRequest = new Friend({ sender: user.id, reciever: reciever.id });
+    const friendRequestExists = await Friend.findOne({ $or: [{ sender: user.id, receiver: receiver.id }, { sender: receiver.id, receiver: user.id }] });
+
+    if (!friendRequestExists) {
+      const newFriendRequest = new Friend({ sender: user.id, receiver: receiver.id });
       return await newFriendRequest.save()
     }
-    return friendRequest
+    throw 'friend request already exists'
   } catch (error) {
     console.error('friend-creation request failed: ', error)
     return { type: 'error', message: error }

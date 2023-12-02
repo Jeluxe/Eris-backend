@@ -143,12 +143,15 @@ io.on("connection", async (socket) => {
       });
     }
   }
-
   const rooms = await getUsers(users, socket.user.id)
+
+  const broadcastUserStatusUpdate = (status) => {
+    socket.to(rooms?.map(({ rid }) => rid.toString())).emit('user-connected', socket.user.id, status)
+  }
 
   rooms.forEach(({ rid }) => socket.join(rid.toString()))
 
-  socket.to(rooms?.map(({ rid }) => rid.toString())).emit('user-connected', socket.user.id)
+  broadcastUserStatusUpdate('online')
 
   socket.on('message', async (message) => {
     let newMessage = await saveMessageToDatabase(socket.user.id, message)
@@ -172,6 +175,14 @@ io.on("connection", async (socket) => {
   socket.on('new-friend-request', async (reciever, callback) => {
     const request = await createFriendRequest(socket.user, reciever)
     callback(request)
+  })
+
+  socket.on('idle', (status) => {
+    broadcastUserStatusUpdate(status)
+  })
+
+  socket.on('disconnect', () => {
+    broadcastUserStatusUpdate('offline')
   })
 
   socket.on('error', (error) => {

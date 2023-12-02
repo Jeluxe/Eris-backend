@@ -2,12 +2,13 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
 const friendSchema = new Schema({
-  sender: { type: String, ref: "User" },
-  receiver: { type: String, ref: "User" },
+  sender: { type: String, ref: "User", required: true },
+  receiver: { type: String, ref: "User", required: true },
   status: {
     type: String,
     enum: ["PENDING", "ACCEPTED", "BLOCKED"],
     default: "PENDING",
+    required: true
   },
 });
 

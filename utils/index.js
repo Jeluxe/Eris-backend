@@ -69,6 +69,7 @@ const getUsers = async (users, currentUserID) => {
 
     if (foundUser) {
       list.push({
+        rid: id,
         ...foundUser,
         status: foundUser.status,
       });
@@ -102,7 +103,7 @@ const addStatusToUser = (list, userStatusList) => {
       ...item,
       user: {
         ...item.user,
-        status: foundStatus || "offline"
+        status: foundStatus.status || "offline"
       }
     }
   })
