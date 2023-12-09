@@ -16,7 +16,7 @@ const { login, authenticate, validate } = require('./middlewares/user');
 const { createUser, findUser } = require('./services/user');
 const { fetchRooms } = require('./services/rooms');
 const { saveMessageToDatabase, fetchMessages } = require('./services/messages');
-const { fetchFriendRequests, createFriendRequest } = require('./services/friend');
+const { fetchFriendRequests, createFriendRequest, updateFriendRequest } = require('./services/friend');
 
 const users = [];
 
@@ -174,6 +174,11 @@ io.on("connection", async (socket) => {
 
   socket.on('new-friend-request', async (reciever, callback) => {
     const request = await createFriendRequest(socket.user, reciever)
+    callback(request)
+  })
+
+  socket.on('update-friend-request', async (id, response, callback) => {
+    const request = await updateFriendRequest(id, response)
     callback(request)
   })
 

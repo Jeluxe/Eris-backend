@@ -11,6 +11,7 @@ const porcessFriendObject = async (friend, isSender) => {
   const processedFriend = {
     ...populatedFriend,
     user: isSender ? populatedFriend.receiver : populatedFriend.sender,
+    isSender
   };
 
   delete processedFriend.receiver;
@@ -65,7 +66,29 @@ const createFriendRequest = async (user, targetUsername) => {
   }
 }
 
+const updateFriendRequest = async (id, response) => {
+  try {
+    switch (response) {
+      case "decline":
+        const deletedFriendRequest = await Friend.findByIdAndDelete({ _id: id });
+        return deletedFriendRequest;
+      case "block":
+        const BlockedFriendRequest = await Friend.findByIdAndUpdate({ _id: id }, { status: "BLOCKED" });
+        return BlockedFriendRequest;
+      case "accept":
+      case "restore":
+        const updatedFriendRequest = await Friend.findOneAndUpdate({ _id: id }, { status: 'ACCEPTED' })
+        return updatedFriendRequest;
+      default:
+        throw new Error("failed to update the request")
+    }
+  } catch (error) {
+    console.log("friend-request failed to update: ", error)
+  }
+}
+
 module.exports = {
   fetchFriendRequests,
-  createFriendRequest
+  createFriendRequest,
+  updateFriendRequest
 }

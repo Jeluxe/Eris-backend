@@ -103,7 +103,7 @@ const addStatusToUser = (list, userStatusList) => {
       ...item,
       user: {
         ...item.user,
-        status: foundStatus.status || "offline"
+        status: foundStatus?.status || "offline"
       }
     }
   })
