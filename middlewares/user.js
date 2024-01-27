@@ -25,7 +25,6 @@ const login = (req, res, next) => {
 const authenticate = (req, res, next) => {
   const accessToken = req.headers['Authorization'];
   const refreshToken = req.cookies['refreshToken'];
-  console.log(accessToken, refreshToken)
   if (!accessToken && !refreshToken) {
     return errorHandler(res, 'no-tokens')
   }

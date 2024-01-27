@@ -5,28 +5,27 @@ const helmet = require('helmet');
 const jwt = require('jsonwebtoken');
 const session = require('express-session');
 const mongoose = require('mongoose');
-const { Server } = require('socket.io');
 const http = require('http');
 const MongoDBStore = require('connect-mongodb-session')(session);
-
-const { sessionHash, cookieConfig, maxAge, PORT, uri, jwtSecret } = require('./config');
-const { getUsers, errorHandler, getStatusFromUsers, addStatusToUser } = require('./utils');
+const { users } = require('./constants')
+const { sessionHash, cookieConfig, maxAge, PORT, uri, jwtSecret, origin } = require('./config');
+const { errorHandler, getStatusFromUsers, addStatusToUser } = require('./utils');
 const { login, authenticate, validate } = require('./middlewares/user');
-
 const { createUser, findUser } = require('./services/user');
 const { fetchRooms } = require('./services/rooms');
-const { saveMessageToDatabase, fetchMessages } = require('./services/messages');
-const { fetchFriendRequests, createFriendRequest, updateFriendRequest } = require('./services/friend');
+const { fetchMessages } = require('./services/messages');
+const { fetchFriendRequests } = require('./services/friend');
 
-const users = [];
+const mainHandler = require('./Handlers/mainHandler')
+const mediasoupHandler = require('./Handlers/mediasoupHandler')
 
 const app = express();
 
 const server = http.createServer(app)
 
-const io = new Server(server, {
+const io = require('socket.io')(server, {
   cors: {
-    origin: "http://localhost:5173",
+    origin,
     methods: ["GET", "POST"]
   }
 })
@@ -68,9 +67,9 @@ init();
 app.get('/data', authenticate, async (req, res) => {
   const rooms = await fetchRooms(req.user.id);
   const friends = await fetchFriendRequests(req.user.id) || []
-  const userStatusList = getStatusFromUsers(users, req.user.id);
-  const processedRooms = addStatusToUser(rooms, userStatusList)
-  const processedFriends = addStatusToUser(friends, userStatusList)
+  const userStatusList = await getStatusFromUsers(users, req.user.id);
+  const processedRooms = await addStatusToUser(rooms, userStatusList)
+  const processedFriends = await addStatusToUser(friends, userStatusList)
   res.status(200).send({ rooms: processedRooms, friends: processedFriends })
 })
 
@@ -124,73 +123,20 @@ store.on("error", function (error) {
   console.error(error);
 });
 
+const onConnection = (socket) => {
+  mainHandler(io, socket)
+  mediasoupHandler(socket)
+}
+
 io.use((socket, next) => {
   const user = socket.handshake.auth;
   if (!user) {
     return next(new Error("invalid user"));
   } else {
     socket.user = user;
+    delete socket.handshake.auth;
     next();
   }
 });
 
-io.on("connection", async (socket) => {
-  for (let [id, clientSocket] of io.of("/").sockets) {
-    if (!users.find(user => user.id === clientSocket.user.id)) {
-      users.push({
-        ...clientSocket.user,
-        status: "online",
-      });
-    }
-  }
-  const rooms = await getUsers(users, socket.user.id)
-
-  const broadcastUserStatusUpdate = (status) => {
-    socket.to(rooms?.map(({ rid }) => rid.toString())).emit('user-connected', socket.user.id, status)
-  }
-
-  rooms.forEach(({ rid }) => socket.join(rid.toString()))
-
-  broadcastUserStatusUpdate('online')
-
-  socket.on('message', async (message) => {
-    let newMessage = await saveMessageToDatabase(socket.user.id, message)
-
-    if (!socket.rooms.has(newMessage.rid)) {
-      socket.join(newMessage.rid)
-    }
-    try {
-      if (newMessage.type === 2) {
-        const base64Content = newMessage.content.toString('base64');
-        newMessage = { ...newMessage.toJSON(), content: base64Content }
-      }
-
-      io.to(newMessage.rid).emit('message', newMessage)
-    } catch (error) {
-      console.error(error)
-    }
-  })
-
-
-  socket.on('new-friend-request', async (reciever, callback) => {
-    const request = await createFriendRequest(socket.user, reciever)
-    callback(request)
-  })
-
-  socket.on('update-friend-request', async (id, response, callback) => {
-    const request = await updateFriendRequest(id, response)
-    callback(request)
-  })
-
-  socket.on('idle', (status) => {
-    broadcastUserStatusUpdate(status)
-  })
-
-  socket.on('disconnect', () => {
-    broadcastUserStatusUpdate('offline')
-  })
-
-  socket.on('error', (error) => {
-    console.error('Socket.IO server error: ', error)
-  })
-})
+io.on("connection", onConnection)

@@ -11,5 +11,6 @@ module.exports = {
   passwordHash: process.env.PASSWORD_HASH,
   jwtSecret: process.env.JWT_SECRET,
   PORT: process.env.PORT || 4000,
-  uri: process.env.MONGODB_URI
+  uri: process.env.MONGODB_URI,
+  origin: process.env.ORIGIN
 }
