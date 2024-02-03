@@ -1,6 +1,9 @@
 const crypto = require('crypto');
-const { passwordHash } = require("../config/index.js");
+const mediasoup = require("mediasoup");
+const { passwordHash } = require("../config");
+const { mediasoup: { worker: { logLevel, logTags, rtcMaxPort, rtcMinPort } } } = require("../config/mediasoup-config");
 const { fetchRooms } = require('../services/rooms.js');
+const { users } = require('../constants');
 
 
 const createHashedPassword = (password) =>
@@ -39,8 +42,25 @@ const errorHandler = (res = null, type, error = null) => {
 
       return errors;
     default:
-      return res.status(500).json({ error: "Something went wrong. try again later!" })
+      return res.status(500).json({ error: "Something went wrong. try again later!" });
   }
+}
+
+const createWorker = async () => {
+  let worker;
+  worker = await mediasoup.createWorker({ logLevel, logTags, rtcMinPort, rtcMaxPort });
+  console.log(`worker pid ${worker.pid}`);
+
+  worker.on("died", (error) => {
+    console.error("mediasoup worker has died");
+    setTimeout(() => process.exit(1), 2000);
+  });
+
+  return worker;
+};
+
+const getSocketID = (userID) => {
+  return users.find(({ id }) => id === userID)?.socketID;
 }
 
 const findRoom = (rooms, targetID) => {
@@ -49,22 +69,13 @@ const findRoom = (rooms, targetID) => {
   });
 };
 
-const findSocketByUserId = (sockets, userID) => {
-  for (let socket in sockets) {
-    if (socket.user.id === userID) {
-      return socket;
-    }
-  }
-  return "not found";
-};
-
 const getUsers = async (users, currentUserID) => {
   const rooms = await fetchRooms(currentUserID);
   const list = [];
 
-  rooms?.forEach(({ id, user }) => {
+  rooms?.forEach(({ id, recipients }) => {
     const foundUser = users.find((userItem) => {
-      return userItem.id === user.id.toString() && userItem.id !== currentUserID;
+      return userItem.id === recipients.id.toString() && userItem.id !== currentUserID;
     });
 
     if (foundUser) {
@@ -76,9 +87,9 @@ const getUsers = async (users, currentUserID) => {
     } else {
       list.push({
         rid: id,
-        id: user.id,
-        username: user.username,
-        avatar: user.avatar,
+        id: recipients.id,
+        username: recipients.username,
+        avatar: recipients.avatar,
         status: "offline",
       });
     }
@@ -87,13 +98,13 @@ const getUsers = async (users, currentUserID) => {
   return list;
 }
 
-const getStatusFromUsers = (users, clientID) => {
+const getStatusFromUsers = (clientID) => {
   return users.filter(user => user.id !== clientID).map(({ id, status }) => {
     return {
       id,
       status
     }
-  })
+  });
 }
 
 const addStatusToUser = (list, userStatusList) => {
@@ -106,14 +117,15 @@ const addStatusToUser = (list, userStatusList) => {
         status: foundStatus?.status || "offline"
       }
     }
-  })
+  });
 }
 
 module.exports = {
   errorHandler,
   createHashedPassword,
+  getSocketID,
+  createWorker,
   findRoom,
-  findSocketByUserId,
   getUsers,
   getStatusFromUsers,
   addStatusToUser,

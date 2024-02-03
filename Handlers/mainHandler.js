@@ -1,13 +1,16 @@
-const { saveMessageToDatabase } = require('../services/messages');
+const { addMessage, editMessage, deleteMessage } = require('../services/messages');
 const { createFriendRequest, updateFriendRequest } = require('../services/friend');
-const { users } = require('../constants')
-const { getUsers } = require('../utils');
+const { users } = require('../constants');
+const { getUsers, getSocketID } = require('../utils');
+const { getRoom, createRoom } = require('../services/rooms');
+const { findUserByUsername } = require('../services/user');
 
 module.exports = async (io, socket) => {
-  for (let [id, clientSocket] of io.of("/").sockets) {
-    if (!users.find(user => user.id === clientSocket.user.id)) {
+  for (let [id, socketClient] of io.of("/").sockets) {
+    if (!users.find(user => user.id === socketClient.user.id)) {
       users.push({
-        ...clientSocket.user,
+        ...socketClient.user,
+        socketID: id,
         status: "online",
       });
     }
@@ -23,32 +26,67 @@ module.exports = async (io, socket) => {
 
   broadcastUserStatusUpdate('online')
 
-  socket.on('message', async (message) => {
-    let newMessage = await saveMessageToDatabase(socket.user.id, message)
-
-    if (!socket.rooms.has(newMessage.rid)) {
-      socket.join(newMessage.rid)
-    }
+  socket.on('message', async (message, cb) => {
     try {
+      let newMessage = await addMessage(socket.user.id, message)
+
+      if (!socket.rooms.has(newMessage.rid)) {
+        socket.join(newMessage.rid)
+      }
       if (newMessage.type === 2) {
         const base64Content = newMessage.content.toString('base64');
         newMessage = { ...newMessage.toJSON(), content: base64Content }
       }
 
-      io.to(newMessage.rid).emit('message', newMessage)
+      io.to(newMessage.rid).emit('message', newMessage.toJSON())
     } catch (error) {
       console.error(error)
+      cb(error)
     }
   })
 
-  socket.on('new-friend-request', async (reciever, callback) => {
-    const request = await createFriendRequest(socket.user, reciever)
-    callback(request)
+  socket.on('edit-message', async (messageToEdit, cb) => {
+    try {
+      const foundRoom = await getRoom(socket.user.id, messageToEdit.rid);
+      const editedMessage = await editMessage(messageToEdit);
+      cb(editedMessage);
+      io.to(foundRoom.id).emit('edited-message', editedMessage)
+    } catch (err) {
+      cb(err)
+    }
+  })
+
+  socket.on('delete-message', async ({ id, rid }, cb) => {
+    try {
+      const foundRoom = await getRoom(socket.user.id, rid);
+      const deletedMessage = await deleteMessage(id)
+      io.to(foundRoom.id).emit('deleted-message', deletedMessage.id)
+    } catch (err) {
+      cb(err)
+    }
+  })
+
+  socket.on('new-friend-request', async (targetUsername, callback) => {
+    try {
+      const receiver = await findUserByUsername(targetUsername);
+      const request = await createFriendRequest(socket.user, receiver)
+      callback(request)
+      socket.to(getSocketID(receiver.id)).emit("new-friend-request", request)
+    } catch (err) {
+      console.log(err);
+      callback(err)
+    }
   })
 
   socket.on('update-friend-request', async (id, response, callback) => {
-    const request = await updateFriendRequest(id, response)
-    callback(request)
+    try {
+      const request = await updateFriendRequest(id, socket.user, response)
+      const targetID = request.targetID;
+      delete request.targetID;
+      socket.to(getSocketID(targetID)).emit("update-friend-request", request)
+    } catch (err) {
+      callback(err)
+    }
   })
 
   socket.on('idle', (status) => {
