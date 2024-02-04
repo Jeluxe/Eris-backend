@@ -35,10 +35,10 @@ module.exports = async (io, socket) => {
       }
       if (newMessage.type === 2) {
         const base64Content = newMessage.content.toString('base64');
-        newMessage = { ...newMessage.toJSON(), content: base64Content }
+        newMessage.content = base64Content;
       }
 
-      io.to(newMessage.rid).emit('message', newMessage.toJSON())
+      io.to(newMessage.rid).emit('message', newMessage)
     } catch (error) {
       console.error(error)
       cb(error)
