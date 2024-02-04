@@ -45,14 +45,14 @@ module.exports = async (io, socket) => {
     }
   })
 
-  socket.on('edit-message', async (messageToEdit, cb) => {
+  socket.on('edit-message', async ({ message, newContent }, cb) => {
     try {
-      const foundRoom = await getRoom(socket.user.id, messageToEdit.rid);
-      const editedMessage = await editMessage(messageToEdit);
-      cb(editedMessage);
-      io.to(foundRoom.id).emit('edited-message', editedMessage)
-    } catch (err) {
-      cb(err)
+      const foundRoom = await getRoom(socket.user.id, message.rid);
+      const editedMessage = await editMessage(message.id, newContent);
+      cb({ editedMessage })
+      io.to(foundRoom.id).emit('edited-message', editedMessage);
+    } catch (error) {
+      cb({ error })
     }
   })
 
