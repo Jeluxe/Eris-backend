@@ -60,9 +60,10 @@ module.exports = async (io, socket) => {
     try {
       const foundRoom = await getRoom(socket.user.id, rid);
       const deletedMessage = await deleteMessage(id)
+      cb({ deletedMessageID: deletedMessage.id })
       io.to(foundRoom.id).emit('deleted-message', deletedMessage.id)
-    } catch (err) {
-      cb(err)
+    } catch (error) {
+      cb({ error })
     }
   })
 
