@@ -3,9 +3,9 @@ const { getRoom } = require('../services/rooms');
 
 const rooms = {};
 const peers = {};
-const transports = [];
-const producers = [];
-const consumers = [];
+let transports = [];
+let producers = [];
+let consumers = [];
 
 module.exports = (socket, worker) => {
   console.log('mediasoup socket on!')
