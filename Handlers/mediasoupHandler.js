@@ -1,8 +1,8 @@
 const config = require("../config/mediasoup-config");
 const { getRoom } = require('../services/rooms');
 
-const rooms = {};
-const peers = {};
+let rooms = {};
+let peers = {};
 let transports = [];
 let producers = [];
 let consumers = [];
@@ -55,24 +55,27 @@ module.exports = (socket, worker) => {
   socket.on("leaveRoom", () => closeConnections());
 
   socket.on("joinRoom", async (roomID, callback) => {
-    const room = await getRoom(socket.user.id, roomID);
-    const router = await createRoom(room.id, socket.id);
-    peers[socket.id] = {
-      socket,
-      roomID: room.id,
-      transports: [],
-      producers: [],
-      consumers: [],
-      peerDetails: {
-        name: "",
-        isAdmin: false,
-      },
-    };
+    try {
+      const room = await getRoom(socket.user.id, roomID);
+      const router = await createRoom(room.id, socket.id);
+      peers[socket.id] = {
+        socket,
+        roomID: room.id,
+        transports: [],
+        producers: [],
+        consumers: [],
+        peerDetails: {
+          name: "",
+          isAdmin: false,
+        },
+      };
 
-    const rtpCapabilities = router.rtpCapabilities;
-
-    callback({ rtpCapabilities });
-  });
+      const rtpCapabilities = router.rtpCapabilities;
+      callback({ rtpCapabilities });
+    } catch (error) {
+      callback(error)
+    }
+  })
 
   const createRoom = async (roomID, socketId) => {
     let router;
