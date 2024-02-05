@@ -71,8 +71,8 @@ module.exports = (socket) => {
 
   socket.on("leaveRoom", () => closeConnections());
 
-  socket.on("joinRoom", async ({ targetID }, callback) => {
-    const room = await getRoom(socket.user.id, targetID);
+  socket.on("joinRoom", async (roomID, callback) => {
+    const room = await getRoom(socket.user.id, roomID);
     const router = await createRoom(room.id, socket.id);
     peers[socket.id] = {
       socket,
