@@ -127,7 +127,7 @@ store.on("error", function (error) {
 
 const onConnection = (socket) => {
   mainHandler(io, socket);
-  mediasoupHandler(worker, socket);
+  mediasoupHandler(socket, worker);
 }
 
 io.use((socket, next) => {

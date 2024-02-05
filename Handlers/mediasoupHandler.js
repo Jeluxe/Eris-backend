@@ -1,34 +1,13 @@
-const mediasoup = require("mediasoup");
 const config = require("../config/mediasoup-config");
 const { getRoom } = require('../services/rooms');
 
-let worker;
-let rooms = {};
-let peers = {};
-let transports = [];
-let producers = [];
-let consumers = [];
+const rooms = {};
+const peers = {};
+const transports = [];
+const producers = [];
+const consumers = [];
 
-const createWorker = async () => {
-  worker = await mediasoup.createWorker({
-    logLevel: config.mediasoup.worker.logLevel,
-    logTags: config.mediasoup.worker.logTags,
-    rtcMinPort: config.mediasoup.worker.rtcMinPort,
-    rtcMaxPort: config.mediasoup.worker.rtcMaxPort,
-  });
-  console.log(`worker pid ${worker.pid}`);
-
-  worker.on("died", (error) => {
-    console.error("mediasoup worker has died");
-    setTimeout(() => process.exit(1), 2000);
-  });
-
-  return worker;
-};
-
-worker = createWorker();
-
-module.exports = (socket) => {
+module.exports = (socket, worker) => {
   console.log('mediasoup socket on!')
   const mediaCodecs = config.mediasoup.router.mediaCodecs;
 
@@ -53,6 +32,10 @@ module.exports = (socket) => {
   });
 
   const closeConnections = () => {
+    if (!rooms.length) {
+      return;
+    }
+
     producers = removeItems(producers, socket.id, "producer");
     consumers = removeItems(consumers, socket.id, "consumer");
     transports = removeItems(transports, socket.id, "transport");

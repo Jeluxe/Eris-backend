@@ -17,9 +17,9 @@ const createRoom = async (userID, recipients) => {
   }
 }
 
-const getRoom = async (userID, id) => {
+const getRoom = async (userID, _id) => {
   try {
-    return await Room.findOne({ _id: id, recipients: { $in: [userID] } })
+    return await Room.findOne({ _id, recipients: { $in: [userID] } })
   } catch (error) {
     console.error('failed to fetch room: ', error)
     return error
