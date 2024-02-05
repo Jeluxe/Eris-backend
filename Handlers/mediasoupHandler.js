@@ -22,7 +22,7 @@ module.exports = (socket, worker) => {
       }
     });
     items = items.filter((item) => item.socketId !== socketId);
-
+    console.log(items.length, type);
     return items;
   };
 
@@ -32,7 +32,7 @@ module.exports = (socket, worker) => {
   });
 
   const closeConnections = () => {
-    if (!rooms.length) {
+    if (!Object.keys(rooms).length) {
       return;
     }
 
