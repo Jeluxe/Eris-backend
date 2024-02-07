@@ -37,8 +37,8 @@ module.exports = async (io, socket) => {
         const base64Content = newMessage.content.toString('base64');
         newMessage.content = base64Content;
       }
-
-      io.to(newMessage.rid).emit('message', newMessage)
+      cb(newMessage);
+      socket.broadcast.to(newMessage.rid).emit('message', newMessage)
     } catch (error) {
       console.error(error)
       cb(error)
@@ -50,7 +50,7 @@ module.exports = async (io, socket) => {
       const foundRoom = await getRoom(socket.user.id, message.rid);
       const editedMessage = await editMessage(message.id, newContent);
       cb({ editedMessage })
-      io.to(foundRoom.id).emit('edited-message', editedMessage);
+      socket.broadcast.to(foundRoom.id).emit('edited-message', editedMessage);
     } catch (error) {
       cb({ error })
     }
@@ -61,7 +61,7 @@ module.exports = async (io, socket) => {
       const foundRoom = await getRoom(socket.user.id, rid);
       const deletedMessage = await deleteMessage(id)
       cb({ deletedMessageID: deletedMessage.id })
-      io.to(foundRoom.id).emit('deleted-message', deletedMessage.id)
+      socket.broadcast.to(foundRoom.id).emit('deleted-message', deletedMessage.id)
     } catch (error) {
       cb({ error })
     }
