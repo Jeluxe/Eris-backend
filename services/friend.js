@@ -68,12 +68,15 @@ const updateFriendRequest = async (_id, user, response) => {
   try {
     switch (response) {
       case "decline":
-        const { sender, receiver } = await Friend.findByIdAndDelete({ _id });
-        return {
-          id: _id,
-          status: "deleted",
-          targetID: user.id === sender.id ? sender.id : receiver.id,
-        };
+        const friendRequest = await Friend.findByIdAndDelete({ _id });
+        if (friendRequest) {
+          const { sender, receiver } = friendRequest
+          return {
+            id: _id,
+            status: "deleted",
+            targetID: user.id === sender.id ? sender.id : receiver.id,
+          };
+        }
       case "block":
         const BlockedFriendRequest = await Friend.findByIdAndUpdate({ _id }, { status: "BLOCKED" });
         return BlockedFriendRequest;
