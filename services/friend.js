@@ -64,22 +64,22 @@ const createFriendRequest = async (user, receiver) => {
   }
 }
 
-const updateFriendRequest = async (id, user, response) => {
+const updateFriendRequest = async (_id, user, response) => {
   try {
     switch (response) {
       case "decline":
-        const { sender, receiver } = await Friend.findByIdAndDelete({ id });
+        const { sender, receiver } = await Friend.findByIdAndDelete({ _id });
         return {
-          id,
+          id: _id,
           status: "deleted",
           targetID: user.id === sender.id ? sender.id : receiver.id,
         };
       case "block":
-        const BlockedFriendRequest = await Friend.findByIdAndUpdate({ id }, { status: "BLOCKED" });
+        const BlockedFriendRequest = await Friend.findByIdAndUpdate({ _id }, { status: "BLOCKED" });
         return BlockedFriendRequest;
       case "accept":
       case "restore":
-        const updatedFriendRequest = await Friend.findOneAndUpdate({ id }, { status: 'ACCEPTED' })
+        const updatedFriendRequest = await Friend.findOneAndUpdate({ _id }, { status: 'ACCEPTED' })
         return updatedFriendRequest;
       default:
         throw new Error("failed to update the request")

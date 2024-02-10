@@ -108,16 +108,20 @@ const getStatusFromUsers = (clientID) => {
 }
 
 const addStatusToUser = (list, userStatusList) => {
-  return list.map(item => {
-    const foundStatus = userStatusList?.find(status => status.id === item.user.id)
-    return {
-      ...item,
-      user: {
-        ...item.user,
-        status: foundStatus?.status || "offline"
+  try {
+    return list.map(item => {
+      const foundStatus = userStatusList?.find(status => status.id === (item["user"] || item["recipients"]).id)
+      return {
+        ...item,
+        user: {
+          ...item.user,
+          status: foundStatus?.status || "offline"
+        }
       }
-    }
-  });
+    });
+  } catch (error) {
+    console.log(error)
+  }
 }
 
 module.exports = {
