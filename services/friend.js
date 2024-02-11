@@ -1,7 +1,6 @@
 const Friend = require('../models/friend.model');
-const { findUserByUsername } = require('./user');
 
-const porcessFriendObject = async (friend, isSender) => {
+const processFriendObject = async (friend, isSender) => {
   let populatedFriend = await Friend.populate(friend, {
     path: isSender ? 'receiver' : 'sender',
   });
@@ -29,7 +28,7 @@ const fetchFriendRequests = async (id) => {
 
         const isSender = friend.sender === id
 
-        return await porcessFriendObject(friend, isSender);
+        return await processFriendObject(friend, isSender);
       }));
 
       return processedFriends
@@ -55,7 +54,7 @@ const createFriendRequest = async (user, receiver) => {
       const newFriendRequest = new Friend({ sender: user.id, receiver: receiver.id });
       const friend = await newFriendRequest.save()
 
-      return await porcessFriendObject(friend, true)
+      return await processFriendObject(friend, true)
     }
     throw 'friend request already exists'
   } catch (error) {
@@ -73,8 +72,8 @@ const updateFriendRequest = async (_id, user, response) => {
           const { sender, receiver } = friendRequest
           return {
             id: _id,
-            status: "deleted",
-            targetID: user.id === sender.id ? sender.id : receiver.id,
+            status: "DECLINED",
+            targetID: user.id !== sender ? sender : receiver,
           };
         }
       case "block":
