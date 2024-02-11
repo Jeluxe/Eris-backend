@@ -74,6 +74,7 @@ const getUsers = async (users, currentUserID) => {
   const list = [];
 
   rooms?.forEach(({ id, recipients }) => {
+    if (recipients === undefined) return;
     const foundUser = users.find((userItem) => {
       return userItem.id === recipients.id.toString() && userItem.id !== currentUserID;
     });
