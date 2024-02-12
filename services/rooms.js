@@ -2,10 +2,9 @@ const Room = require("../models/room.model");
 
 const createRoom = async (userID, recipients) => {
   let newRoom = new Room({
-    type: recipients.length > 1 ? 1 : 0,
-    recipients: [userID, ...recipients]
+    type: typeof recipients !== "string" && recipients.length > 0 ? 1 : 0,
+    recipients: typeof recipients !== "string" && recipients.length > 0 ? [userID, ...recipients] : [userID, recipients]
   })
-
   try {
     newRoom = await newRoom.save()
     const populatedRoom = await newRoom.populate("recipients");
