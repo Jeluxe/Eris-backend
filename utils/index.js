@@ -3,7 +3,7 @@ const mediasoup = require("mediasoup");
 const { passwordHash } = require("../config");
 const { mediasoup: { worker: { logLevel, logTags, rtcMaxPort, rtcMinPort } } } = require("../config/mediasoup-config");
 const { fetchRooms } = require('../services/rooms.js');
-const { users } = require("../constants")
+const globalUsersState = require("../constants")
 
 const createHashedPassword = (password) =>
   crypto.createHmac("sha256", passwordHash).update(password).digest("hex");
@@ -58,8 +58,8 @@ const createWorker = async () => {
   return worker;
 };
 
-const getSocketID = (users, userID) => {
-  return users.find(({ id }) => id === userID)?.socketID;
+const getSocketID = (userID) => {
+  return globalUsersState.users.find(({ id }) => id === userID)?.socketID;
 }
 
 const findRoom = (rooms, targetID) => {
@@ -68,12 +68,12 @@ const findRoom = (rooms, targetID) => {
   });
 };
 
-const getUsers = async (users, currentUserID) => {
+const getUsers = async (currentUserID) => {
   const rooms = await fetchRooms(currentUserID);
   const list = [];
 
   rooms?.forEach(({ id, recipients }) => {
-    const foundUser = users.find((userItem) => {
+    const foundUser = globalUsersState.users.find((userItem) => {
       return userItem.id === recipients?.id && userItem.id !== currentUserID;
     });
 
@@ -98,7 +98,7 @@ const getUsers = async (users, currentUserID) => {
 }
 
 const getStatusFromUsers = (clientID) => {
-  return users.filter(user => user.id !== clientID).map(({ id, status }) => {
+  return globalUsersState.users.filter(user => user.id !== clientID).map(({ id, status }) => {
     return {
       id,
       status

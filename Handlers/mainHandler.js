@@ -1,20 +1,20 @@
 const { addMessage, editMessage, deleteMessage } = require('../services/messages');
 const { createFriendRequest, updateFriendRequest } = require('../services/friend');
-let { users } = require("../constants")
+const globalUsersState = require("../constants")
 const { getUsers, getSocketID } = require('../utils');
 const { getRoom, createRoom } = require('../services/rooms');
 const { findUserByUsername } = require('../services/user');
 
 module.exports = async (io, socket) => {
   for (let [id, socketClient] of io.of("/").sockets) {
-    if (!users.find(user => user?.id === socketClient.user.id)) {
-      users.push({
+    if (!globalUsersState.users.find(user => user?.id === socketClient.user.id)) {
+      globalUsersState.users.push({
         ...socketClient.user,
         socketID: id,
         status: "online",
       });
     } else {
-      users = users.map(user => {
+      globalUsersState.users = globalUsersState.users.map(user => {
         if (user.id === socketClient.user.id) {
           return {
             ...user,
@@ -23,11 +23,10 @@ module.exports = async (io, socket) => {
         }
         return user
       })
-      console.log(users)
     }
   }
   console.log('main socket on!')
-  const rooms = await getUsers(users, socket.user.id)
+  const rooms = await getUsers(socket.user.id)
 
   const broadcastUserStatusUpdate = (status) => {
     socket.to(rooms?.map(({ rid }) => rid.toString())).emit('user-connected', socket.user.id, status)
@@ -87,7 +86,7 @@ module.exports = async (io, socket) => {
       const foundUser = await findUserByUsername(targetUsername);
       const { sender, receiver } = await createFriendRequest(socket.user.id, foundUser);
       callback(sender)
-      const foundSocketID = getSocketID(users, foundUser.id)
+      const foundSocketID = getSocketID(foundUser.id)
       if (foundSocketID) {
         io.to(foundSocketID).emit("recieved-new-friend-request", receiver);
       }
@@ -103,7 +102,7 @@ module.exports = async (io, socket) => {
       const targetID = request.targetID;
       delete request.targetID;
       callback(request);
-      const foundSocketID = getSocketID(users, targetID);
+      const foundSocketID = getSocketID(targetID);
       if (foundSocketID) {
         io.to(foundSocketID).emit("updated-friend-request", request)
       }
