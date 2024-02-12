@@ -3,8 +3,7 @@ const mediasoup = require("mediasoup");
 const { passwordHash } = require("../config");
 const { mediasoup: { worker: { logLevel, logTags, rtcMaxPort, rtcMinPort } } } = require("../config/mediasoup-config");
 const { fetchRooms } = require('../services/rooms.js');
-const { users } = require('../constants');
-
+const { users } = require("../constants")
 
 const createHashedPassword = (password) =>
   crypto.createHmac("sha256", passwordHash).update(password).digest("hex");
@@ -59,7 +58,7 @@ const createWorker = async () => {
   return worker;
 };
 
-const getSocketID = (userID) => {
+const getSocketID = (users, userID) => {
   return users.find(({ id }) => id === userID)?.socketID;
 }
 
