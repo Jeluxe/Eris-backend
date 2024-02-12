@@ -1,9 +1,20 @@
 const Friend = require('../models/friend.model');
 
-const processFriendObject = async (friend) => {
+const processFriendObject = async (userID, friend, both) => {
   let populatedFriend = await Friend.populate(friend, 'sender receiver');
   populatedFriend = populatedFriend.toJSON()
-  return populatedFriend;
+
+  const isSender = userID === populatedFriend.sender.id
+
+  const sender = { ...populatedFriend, user: populatedFriend.receiver, isSender }
+  const receiver = { ...populatedFriend, user: populatedFriend.sender, isSender: both ? !isSender : isSender }
+
+  delete sender.sender
+  delete sender.receiver
+  delete receiver.sender
+  delete receiver.receiver
+
+  return both ? { sender, receiver } : isSender ? sender : receiver;
 }
 
 const fetchFriendRequests = async (id) => {
@@ -12,7 +23,7 @@ const fetchFriendRequests = async (id) => {
 
     if (friends.length > 0) {
       const processedFriends = await Promise.all(friends.map(async friend => {
-        return await processFriendObject(friend);
+        return await processFriendObject(id, friend, false);
       }));
 
       return processedFriends
@@ -38,7 +49,7 @@ const createFriendRequest = async (userID, receiver) => {
       const newFriendRequest = new Friend({ sender: userID, receiver: receiver.id });
       const friend = await newFriendRequest.save()
 
-      return await processFriendObject(friend)
+      return await processFriendObject(userID, friend, true)
     }
     throw 'friend request already exists'
   } catch (error) {
