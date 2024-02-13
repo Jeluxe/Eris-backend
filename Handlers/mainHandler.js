@@ -99,12 +99,14 @@ module.exports = async (io, socket) => {
   socket.on('update-friend-request', async (id, response, callback) => {
     try {
       const request = await updateFriendRequest(id, socket.user, response)
-      const targetID = request.targetID;
-      delete request.targetID;
-      callback(request);
-      const foundSocketID = getSocketID(targetID);
+      const targetID = request?.targetID;
+      if (targetID) {
+        delete request.targetID;
+      }
+      callback(request?.sender || request);
+      const foundSocketID = getSocketID(request?.sender?.user?.id || targetID);
       if (foundSocketID) {
-        io.to(foundSocketID).emit("updated-friend-request", request)
+        io.to(foundSocketID).emit("updated-friend-request", request?.receiver || request)
       }
     } catch (err) {
       callback(err)

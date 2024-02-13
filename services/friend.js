@@ -6,8 +6,8 @@ const processFriendObject = async (userID, friend, both) => {
 
   const isSender = userID === populatedFriend.sender.id
 
-  const sender = { ...populatedFriend, user: populatedFriend.receiver, isSender }
-  const receiver = { ...populatedFriend, user: populatedFriend.sender, isSender: both ? !isSender : isSender }
+  const sender = { ...populatedFriend, user: isSender ? populatedFriend.receiver : populatedFriend.sender, isSender }
+  const receiver = { ...populatedFriend, user: both ? isSender ? populatedFriend.sender : populatedFriend.receiver : !isSender ? populatedFriend.sender : populatedFriend.receiver, isSender: both ? !isSender : isSender }
 
   delete sender.sender
   delete sender.receiver
@@ -58,7 +58,11 @@ const createFriendRequest = async (userID, receiver) => {
   }
 }
 
-const updateFriendRequest = async (_id, user, response) => {
+const updateDocument = async (_id, status) => {
+  return await Friend.findByIdAndUpdate({ _id }, { status }, { new: true })
+}
+
+const updateFriendRequest = async (_id, userID, response) => {
   try {
     switch (response) {
       case "decline":
@@ -68,14 +72,16 @@ const updateFriendRequest = async (_id, user, response) => {
           return {
             id: _id,
             status: "DECLINED",
-            targetID: user.id !== sender ? sender : receiver,
+            targetID: userID !== sender ? sender : receiver,
           };
         }
       case "block":
-        return await Friend.findByIdAndUpdate({ _id }, { status: "BLOCKED" });
+        const blockedFriendRequest = await updateDocument(_id, "BLOCKED");
+        return processFriendObject(userID, blockedFriendRequest, true);
       case "accept":
       case "restore":
-        return await Friend.findByIdAndUpdate({ _id }, { status: 'ACCEPTED' });
+        const updatedFriendRequest = await updateDocument(_id, "ACCEPTED");
+        return processFriendObject(userID, updatedFriendRequest, true);
       default:
         throw new Error("failed to update the request")
     }
