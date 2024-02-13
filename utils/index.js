@@ -106,7 +106,11 @@ const getStatusFromUsers = (clientID) => {
   });
 }
 
-const addStatusToUser = (list, userStatusList) => {
+const getUserStatusById = (id) => {
+  return globalUsersState.users.find(user => user.id === id)?.status || "offline"
+}
+
+const fetchUsersStatus = (list, userStatusList) => {
   try {
     return list.map(item => {
       const foundUser = userStatusList?.find(user => user.id === (item["user"] || item["recipients"])?.id)
@@ -131,6 +135,6 @@ module.exports = {
   findRoom,
   getUsers,
   getStatusFromUsers,
-  addStatusToUser,
-
+  getUserStatusById,
+  fetchUsersStatus,
 };

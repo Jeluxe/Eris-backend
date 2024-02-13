@@ -1,7 +1,7 @@
 const { addMessage, editMessage, deleteMessage } = require('../services/messages');
 const { createFriendRequest, updateFriendRequest } = require('../services/friend');
 const globalUsersState = require("../constants")
-const { getUsers, getSocketID } = require('../utils');
+const { getUsers, getSocketID, getUserStatusById } = require('../utils');
 const { getRoom, createRoom } = require('../services/rooms');
 const { findUserByUsername } = require('../services/user');
 
@@ -102,10 +102,15 @@ module.exports = async (io, socket) => {
       const targetID = request?.targetID;
       if (targetID) {
         delete request.targetID;
+      } else if (request?.sender?.user) {
+        const senderStatus = getUserStatusById(request.sender.user.id);
+        request.sender.user.status = senderStatus;
       }
       callback(request?.sender || request);
       const foundSocketID = getSocketID(request?.sender?.user?.id || targetID);
-      if (foundSocketID) {
+      if (foundSocketID && request?.receiver?.user) {
+        const receiverStatus = getUserStatusById(request.receiver.user.id)
+        request.receiver.user.status = receiverStatus;
         io.to(foundSocketID).emit("updated-friend-request", request?.receiver || request)
       }
     } catch (err) {
