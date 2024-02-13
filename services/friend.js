@@ -72,12 +72,10 @@ const updateFriendRequest = async (_id, user, response) => {
           };
         }
       case "block":
-        const BlockedFriendRequest = await Friend.findByIdAndUpdate({ _id }, { status: "BLOCKED" });
-        return BlockedFriendRequest;
+        return await Friend.findByIdAndUpdate({ _id }, { status: "BLOCKED" });
       case "accept":
       case "restore":
-        const updatedFriendRequest = await Friend.findByIdAndUpdate({ _id }, { status: 'ACCEPTED' });
-        return updatedFriendRequest;
+        return await Friend.findByIdAndUpdate({ _id }, { status: 'ACCEPTED' });
       default:
         throw new Error("failed to update the request")
     }
