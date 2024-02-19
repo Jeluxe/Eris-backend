@@ -70,8 +70,8 @@ app.get('/data', authenticate, async (req, res) => {
   const rooms = await fetchRooms(req.user.id);
   const friends = await fetchFriendRequests(req.user.id) || [];
   const userStatusList = getStatusFromUsers(req.user.id);
-  const processedRooms = await fetchUsersStatus(rooms, userStatusList);
-  const processedFriends = await fetchUsersStatus(friends, userStatusList);
+  const processedRooms = await fetchUsersStatus(rooms, "recipients", userStatusList);
+  const processedFriends = await fetchUsersStatus(friends, "user", userStatusList);
   res.status(200).send({ rooms: processedRooms, friends: processedFriends });
 });
 

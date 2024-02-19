@@ -110,14 +110,14 @@ const getUserStatusById = (id) => {
   return globalUsersState.users.find(user => user.id === id)?.status || "offline"
 }
 
-const fetchUsersStatus = (list, userStatusList) => {
+const fetchUsersStatus = (list, type, userStatusList) => {
   try {
     return list.map(item => {
-      const foundUser = userStatusList?.find(user => user.id === (item["user"] || item["recipients"])?.id)
+      const foundUser = userStatusList?.find(user => user.id === item[type]?.id)
       return {
         ...item,
-        user: {
-          ...item.user,
+        [type]: {
+          ...item[type],
           status: foundUser?.status || "offline"
         }
       }
