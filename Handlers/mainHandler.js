@@ -36,11 +36,18 @@ module.exports = async (io, socket) => {
 
   broadcastUserStatusUpdate('online')
 
+  socket.on("get-room", async (roomID, cb) => {
+    const returnedRoom = await getRoom(socket.user.id, roomID);
+    cb(returnedRoom);
+  })
+
   socket.on('message', async (message, cb) => {
     try {
+      let userID;
       if (message.temp) {
-        const foundRoom = await createRoom(socket.user.id, message.rid)
-        message.rid = foundRoom.id;
+        const newRoom = await createRoom(socket.user.id, message.rid)
+        userID = message.rid
+        message.rid = newRoom.id;
       }
       let newMessage = await addMessage(socket.user.id, message)
 
@@ -52,7 +59,11 @@ module.exports = async (io, socket) => {
         newMessage.content = base64Content;
       }
       cb(newMessage);
-      socket.broadcast.to(newMessage.rid).emit('message', newMessage)
+      if (message.temp) {
+        socket.to(getSocketID(userID)).emit('message', newMessage)
+      } else {
+        socket.broadcast.to(newMessage.rid).emit('message', newMessage)
+      }
     } catch (error) {
       console.error(error)
       cb(error)
