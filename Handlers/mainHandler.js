@@ -54,10 +54,12 @@ module.exports = async (io, socket) => {
       if (!socket.rooms.has(newMessage.rid)) {
         socket.join(newMessage.rid)
       }
-      if (newMessage.type === 2) {
+
+      if (newMessage.type === 1) {
         const base64Content = newMessage.content.toString('base64');
         newMessage.content = base64Content;
       }
+
       cb(newMessage);
       if (message.temp) {
         socket.to(getSocketID(userID)).emit('message', newMessage)
