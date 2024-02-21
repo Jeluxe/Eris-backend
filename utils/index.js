@@ -3,8 +3,7 @@ const mediasoup = require("mediasoup");
 const { passwordHash } = require("../config");
 const { mediasoup: { worker: { logLevel, logTags, rtcMaxPort, rtcMinPort } } } = require("../config/mediasoup-config");
 const { fetchRooms } = require('../services/rooms.js');
-const { users } = require('../constants');
-
+const globalUsersState = require("../constants")
 
 const createHashedPassword = (password) =>
   crypto.createHmac("sha256", passwordHash).update(password).digest("hex");
@@ -60,7 +59,7 @@ const createWorker = async () => {
 };
 
 const getSocketID = (userID) => {
-  return users.find(({ id }) => id === userID)?.socketID;
+  return globalUsersState.users.find(({ id }) => id === userID)?.socketID;
 }
 
 const findRoom = (rooms, targetID) => {
@@ -69,13 +68,13 @@ const findRoom = (rooms, targetID) => {
   });
 };
 
-const getUsers = async (users, currentUserID) => {
+const getUsers = async (currentUserID) => {
   const rooms = await fetchRooms(currentUserID);
   const list = [];
 
   rooms?.forEach(({ id, recipients }) => {
-    const foundUser = users.find((userItem) => {
-      return userItem.id === recipients.id.toString() && userItem.id !== currentUserID;
+    const foundUser = globalUsersState.users.find((userItem) => {
+      return userItem.id === recipients?.id && userItem.id !== currentUserID;
     });
 
     if (foundUser) {
@@ -99,7 +98,7 @@ const getUsers = async (users, currentUserID) => {
 }
 
 const getStatusFromUsers = (clientID) => {
-  return users.filter(user => user.id !== clientID).map(({ id, status }) => {
+  return globalUsersState.users.filter(user => user.id !== clientID).map(({ id, status }) => {
     return {
       id,
       status
@@ -107,17 +106,25 @@ const getStatusFromUsers = (clientID) => {
   });
 }
 
-const addStatusToUser = (list, userStatusList) => {
-  return list.map(item => {
-    const foundStatus = userStatusList?.find(status => status.id === item.user.id)
-    return {
-      ...item,
-      user: {
-        ...item.user,
-        status: foundStatus?.status || "offline"
+const getUserStatusById = (id) => {
+  return globalUsersState.users.find(user => user.id === id)?.status || "offline"
+}
+
+const fetchUsersStatus = (list, type, userStatusList) => {
+  try {
+    return list.map(item => {
+      const foundUser = userStatusList?.find(user => user.id === item[type]?.id)
+      return {
+        ...item,
+        [type]: {
+          ...item[type],
+          status: foundUser?.status || "offline"
+        }
       }
-    }
-  });
+    });
+  } catch (error) {
+    console.log(error)
+  }
 }
 
 module.exports = {
@@ -128,6 +135,6 @@ module.exports = {
   findRoom,
   getUsers,
   getStatusFromUsers,
-  addStatusToUser,
-
+  getUserStatusById,
+  fetchUsersStatus,
 };

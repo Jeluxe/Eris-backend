@@ -1,23 +1,20 @@
 const Friend = require('../models/friend.model');
-const { findUserByUsername } = require('./user');
 
-const porcessFriendObject = async (friend, isSender) => {
-  let populatedFriend = await Friend.populate(friend, {
-    path: isSender ? 'receiver' : 'sender',
-  });
-
+const processFriendObject = async (userID, friend, both) => {
+  let populatedFriend = await Friend.populate(friend, 'sender receiver');
   populatedFriend = populatedFriend.toJSON()
 
-  const processedFriend = {
-    ...populatedFriend,
-    user: isSender ? populatedFriend.receiver : populatedFriend.sender,
-    isSender
-  };
+  const isSender = userID === populatedFriend.sender.id
 
-  delete processedFriend.receiver;
-  delete processedFriend.sender;
+  const sender = { ...populatedFriend, user: isSender ? populatedFriend.receiver : populatedFriend.sender, isSender }
+  const receiver = { ...populatedFriend, user: both ? isSender ? populatedFriend.sender : populatedFriend.receiver : !isSender ? populatedFriend.sender : populatedFriend.receiver, isSender: both ? !isSender : isSender }
 
-  return processedFriend;
+  delete sender.sender
+  delete sender.receiver
+  delete receiver.sender
+  delete receiver.receiver
+
+  return both ? { sender, receiver } : isSender ? sender : receiver;
 }
 
 const fetchFriendRequests = async (id) => {
@@ -26,10 +23,7 @@ const fetchFriendRequests = async (id) => {
 
     if (friends.length > 0) {
       const processedFriends = await Promise.all(friends.map(async friend => {
-
-        const isSender = friend.sender === id
-
-        return await porcessFriendObject(friend, isSender);
+        return await processFriendObject(id, friend, false);
       }));
 
       return processedFriends
@@ -41,21 +35,21 @@ const fetchFriendRequests = async (id) => {
   }
 }
 
-const createFriendRequest = async (user, receiver) => {
+const createFriendRequest = async (userID, receiver) => {
   try {
     if (!receiver) throw "no such username, please consider case sensitive."
 
-    const validateSameUser = user.id === receiver.id;
+    const validateSameUser = userID === receiver.id;
 
     if (validateSameUser) throw "cannot be send to yourself"
 
-    const friendRequestExists = await Friend.findOne({ $or: [{ sender: user.id, receiver: receiver.id }, { sender: receiver.id, receiver: user.id }] });
+    const friendRequestExists = await Friend.findOne({ $or: [{ sender: userID, receiver: receiver.id }, { sender: receiver.id, receiver: userID }] });
 
     if (!friendRequestExists) {
-      const newFriendRequest = new Friend({ sender: user.id, receiver: receiver.id });
+      const newFriendRequest = new Friend({ sender: userID, receiver: receiver.id });
       const friend = await newFriendRequest.save()
 
-      return await porcessFriendObject(friend, true)
+      return await processFriendObject(userID, friend, true)
     }
     throw 'friend request already exists'
   } catch (error) {
@@ -64,23 +58,30 @@ const createFriendRequest = async (user, receiver) => {
   }
 }
 
-const updateFriendRequest = async (id, user, response) => {
+const updateDocument = async (_id, status) => {
+  return await Friend.findByIdAndUpdate({ _id }, { status }, { new: true })
+}
+
+const updateFriendRequest = async (_id, userID, response) => {
   try {
     switch (response) {
       case "decline":
-        const { sender, receiver } = await Friend.findByIdAndDelete({ id });
-        return {
-          id,
-          status: "deleted",
-          targetID: user.id === sender.id ? sender.id : receiver.id,
-        };
+        const friendRequest = await Friend.findByIdAndDelete({ _id });
+        if (friendRequest) {
+          const { sender, receiver } = friendRequest
+          return {
+            id: _id,
+            status: "DECLINED",
+            targetID: userID !== sender ? sender : receiver,
+          };
+        }
       case "block":
-        const BlockedFriendRequest = await Friend.findByIdAndUpdate({ id }, { status: "BLOCKED" });
-        return BlockedFriendRequest;
+        const blockedFriendRequest = await updateDocument(_id, "BLOCKED");
+        return processFriendObject(userID, blockedFriendRequest, true);
       case "accept":
       case "restore":
-        const updatedFriendRequest = await Friend.findOneAndUpdate({ id }, { status: 'ACCEPTED' })
-        return updatedFriendRequest;
+        const updatedFriendRequest = await updateDocument(_id, "ACCEPTED");
+        return processFriendObject(userID, updatedFriendRequest, true);
       default:
         throw new Error("failed to update the request")
     }

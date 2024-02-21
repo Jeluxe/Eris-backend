@@ -32,7 +32,7 @@ const findUserByUsername = async (username) => {
 
     return user;
   } catch (error) {
-    console.log('filed to find user by username: ', error)
+    console.log('failed to find user by username: ', error)
   }
 
 }

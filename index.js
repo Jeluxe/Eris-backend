@@ -8,7 +8,7 @@ const mongoose = require('mongoose');
 const http = require('http');
 const MongoDBStore = require('connect-mongodb-session')(session);
 const { sessionHash, cookieConfig, maxAge, PORT, uri, jwtSecret, origin } = require('./config');
-const { errorHandler, createWorker, getStatusFromUsers, addStatusToUser } = require('./utils');
+const { errorHandler, createWorker, getStatusFromUsers, fetchUsersStatus, } = require('./utils');
 const { login, authenticate, validate } = require('./middlewares/user');
 const { createUser, findUser } = require('./services/user');
 const { fetchRooms } = require('./services/rooms');
@@ -70,8 +70,8 @@ app.get('/data', authenticate, async (req, res) => {
   const rooms = await fetchRooms(req.user.id);
   const friends = await fetchFriendRequests(req.user.id) || [];
   const userStatusList = getStatusFromUsers(req.user.id);
-  const processedRooms = await addStatusToUser(rooms, userStatusList);
-  const processedFriends = await addStatusToUser(friends, userStatusList);
+  const processedRooms = await fetchUsersStatus(rooms, "recipients", userStatusList);
+  const processedFriends = await fetchUsersStatus(friends, "user", userStatusList);
   res.status(200).send({ rooms: processedRooms, friends: processedFriends });
 });
 
