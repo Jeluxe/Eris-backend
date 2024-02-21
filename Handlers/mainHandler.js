@@ -131,6 +131,15 @@ module.exports = async (io, socket) => {
     }
   })
 
+  socket.on("make-call", (targetID, cb) => {
+    try {
+      const foundSocketID = getSocketID(targetID);
+      io.to(foundSocketID).emit("incoming-call", socket.user.id);
+    } catch (error) {
+      cb(error)
+    }
+  })
+
   socket.on('idle', (status) => {
     broadcastUserStatusUpdate(status)
   })
