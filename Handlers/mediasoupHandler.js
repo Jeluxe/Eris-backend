@@ -236,7 +236,11 @@ module.exports = (socket, worker) => {
   };
 
   socket.on("transport-connect", ({ dtlsParameters }) => {
-    getTransport(socket.id).connect({ dtlsParameters });
+    try {
+      getTransport(socket.id).connect({ dtlsParameters });
+    } catch (error) {
+      console.log(error)
+    }
   });
 
   socket.on(
