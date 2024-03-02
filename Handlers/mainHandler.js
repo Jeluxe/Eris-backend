@@ -77,7 +77,7 @@ module.exports = async (io, socket) => {
       const foundRoom = await getRoom(socket.user.id, message.rid);
       const editedMessage = await editMessage(message.id, newContent);
       cb({ editedMessage })
-      socket.broadcast.to(foundRoom.id).emit('edited-message', editedMessage);
+      socket.broadcast.to(foundRoom.id).emit('updated-message', { updateType: "edited", ...editedMessage.toJSON() });
     } catch (error) {
       cb({ error })
     }
@@ -88,7 +88,7 @@ module.exports = async (io, socket) => {
       const foundRoom = await getRoom(socket.user.id, rid);
       const deletedMessage = await deleteMessage(id)
       cb({ deletedMessageID: deletedMessage.id })
-      socket.broadcast.to(foundRoom.id).emit('deleted-message', deletedMessage.id)
+      socket.broadcast.to(foundRoom.id).emit('updated-message', { updateType: "deleted", ...deletedMessage.toJSON() })
     } catch (error) {
       cb({ error })
     }
