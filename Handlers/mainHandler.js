@@ -140,12 +140,12 @@ module.exports = async (io, socket) => {
     }
   })
 
-  socket.on("video-toggle", async (roomID, value) => {
+  socket.on("video-toggle", async (roomID) => {
     try {
       //validate room first.
       const room = await getRoom(socket.user.id, roomID)
       //then continue.
-      socket.broadcast.to(room.id).emit("video-toggle", value)
+      socket.broadcast.to(room.id).emit("video-toggle")
     } catch (error) {
       console.log(error)
     }
