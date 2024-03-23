@@ -117,7 +117,7 @@ app.post('/refresh', (req, res) => {
 });
 
 app.post('/sign-up', validate, async (req, res) => {
-  const newUser = await createUser(req.body);
+  await createUser(req.body);
   res.sendStatus(201);
 })
 
